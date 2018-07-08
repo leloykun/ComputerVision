@@ -240,7 +240,7 @@ def content_loss_func(sess, model):
         N = p.shape[3]
         # M is the height times the width of the feature map (at layer l).
         M = p.shape[1] * p.shape[2]
-        return (1 / (2 * N * M)) * tf.reduce_sum(tf.pow(x - p, 2))
+        return (1 / int(2 * N * M)) * tf.reduce_sum(tf.pow(x - p, 2))
     return _content_loss(sess.run(model['conv4_2']), model['conv4_2'])
 
 def style_loss_func(sess, model):
@@ -263,7 +263,7 @@ def style_loss_func(sess, model):
         shift = tf.constant(-1.0, shape=Ft.shape)
         Ft += shift
 
-        return (1 / (2 * N * M)) * tf.matmul(tf.transpose(Ft), Ft)
+        return (1 / int(2 * N * M)) * tf.matmul(tf.transpose(Ft), Ft)
 
     def _style_loss(a, x):
         """
