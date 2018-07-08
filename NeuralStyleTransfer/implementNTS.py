@@ -47,7 +47,7 @@ NOISE_RATIO = 0.6
 # Number of iterations to run.
 ITERATIONS = 5000
 # Constant to put more emphasis on content loss.
-BETA = 7.5
+BETA = 8.0
 # Constant to put more emphasis on style loss.
 ALPHA = 100
 # Constant to put more emphasis on the total variation loss.
@@ -240,41 +240,40 @@ def content_loss_func(sess, model):
         N = p.shape[3]
         # M is the height times the width of the feature map (at layer l).
         M = p.shape[1] * p.shape[2]
-        # Interestingly, the paper uses this form instead:
-        #
-        #   0.5 * tf.reduce_sum(tf.pow(x - p, 2))
-        #
-        # But this form is very slow in "painting" and thus could be missing
-        # out some constants (from what I see in other source code), so I'll
-        # replicate the same normalization constant as used in style loss.
-        return (1 / (4 * N * M)) * tf.reduce_sum(tf.pow(x - p, 2))
+        return (1 / (2 * N * M)) * tf.reduce_sum(tf.pow(x - p, 2))
     return _content_loss(sess.run(model['conv4_2']), model['conv4_2'])
 
 def style_loss_func(sess, model):
     """
     Style loss function as defined in the paper.
     """
-    def _gram_matrix(F, N, M):
+    def _gram_matrix(F):
         """
         The gram matrix G.
         """
+        # N is the number of filters (at layer l).
+        N = F.shape[3]
+        # M is the height times the width of the feature map (at layer l).
+        M = F.shape[1] * F.shape[2]
+
         Ft = tf.reshape(F, (M, N))
-        return tf.matmul(tf.transpose(Ft), Ft)
+
+        # Improving the Neural Algorithm of Artistic Style
+        # 3.3 Activation Shift
+        shift = tf.constant(-1.0, shape=Ft.shape)
+        Ft += shift
+
+        return (1 / (2 * N * M)) * tf.matmul(tf.transpose(Ft), Ft)
 
     def _style_loss(a, x):
         """
         The style loss calculation.
         """
-        # N is the number of filters (at layer l).
-        N = a.shape[3]
-        # M is the height times the width of the feature map (at layer l).
-        M = a.shape[1] * a.shape[2]
         # A is the style representation of the original image (at layer l).
-        A = _gram_matrix(a, N, M)
+        A = _gram_matrix(a)
         # G is the style representation of the generated image (at layer l).
-        G = _gram_matrix(x, N, M)
-        result = (1 / (4 * N**2 * M**2)) * tf.reduce_sum(tf.pow(G - A, 2))
-        return result
+        G = _gram_matrix(x)
+        return tf.reduce_sum(tf.pow(G - A, 2))
 
     # Layers to use. We will use these layers as advised in the paper.
     # To have softer features, increase the weight of the higher layers
@@ -282,11 +281,11 @@ def style_loss_func(sess, model):
     # To have harder features, decrease the weight of the higher layers
     # (conv5_1) and increase the weight of the lower layers (conv1_1).
     layers = [
-        ('conv1_1', 0.5),
-        ('conv2_1', 1.0),
-        ('conv3_1', 1.5),
-        ('conv4_1', 3.0),
-        ('conv5_1', 4.0),
+        ('conv1_1', 1.0),
+        ('conv2_1', 2.0),
+        ('conv3_1', 4.5),
+        ('conv4_1', 8.0),
+        ('conv5_1', 16.0),
     ]
 
     E = [_style_loss(sess.run(model[layer_name]), model[layer_name]) for layer_name, _ in layers]
