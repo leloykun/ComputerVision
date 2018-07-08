@@ -49,7 +49,7 @@ ITERATIONS = 5000
 # Constant to put more emphasis on content loss.
 BETA = 8.0
 # Constant to put more emphasis on style loss.
-ALPHA = 100
+ALPHA = 1
 # Constant to put more emphasis on the total variation loss.
 GAMMA = 200
 
@@ -357,9 +357,9 @@ def run(iterations = ITERATIONS, content_image=CONTENT_IMAGE, style_image=STYLE_
                 Jt, Jc, Js, Jv = sess.run([total_loss, content_loss, style_loss, total_variational_loss])
                 print("Iteration " + str(i) + " :")
                 print("total cost = " + str(Jt))
-                print("content cost = " + str(Jc))
-                print("style cost = " + str(Js))
-                print("total variational loss = ", str(Jv))
+                print("content cost = " + str(BETA * Jc))
+                print("style cost = " + str(ALPHA * Js))
+                print("total variational loss = ", str(GAMMA * Jv))
 
                 if i % 100 == 0:
                     generated_image = sess.run(model['input'])
